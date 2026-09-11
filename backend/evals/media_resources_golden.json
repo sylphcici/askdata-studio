@@ -1,0 +1,36 @@
+{
+  "dataset": "media_resources_demo_v1",
+  "database": "ecommerce_ops",
+  "user_id": "demo_current_sales",
+  "description": "基于脱敏实习场景构造的媒体资源运营黄金测试集，标准答案由人工确认的DuckDB SQL生成。",
+  "business_definition": "media_resources代表当前歌曲资源；仍未配置专属封面 = image_path为public_third_part.jpeg。故事资源属于独立的stories表，不混入本表。",
+  "cases": [
+    {
+      "id": "media_001",
+      "category": "默认封面明细",
+      "question": "帮我找出目前还没有配置专属封面的歌曲",
+      "expected_tables": ["media_resources"],
+      "expected_fields": ["resource_id", "cn_file_name", "artist", "album", "category", "image_path"],
+      "expected_row_count": 8,
+      "gold_sql": "SELECT resource_id AS 资源ID, cn_file_name AS 歌曲名称, artist AS 歌手, album AS 专辑, category AS 分类, image_path AS 当前封面 FROM media_resources WHERE image_path = 'public_third_part.jpeg' ORDER BY resource_id"
+    },
+    {
+      "id": "media_002",
+      "category": "默认封面汇总",
+      "question": "统计目前各分类仍在使用默认封面的歌曲数量",
+      "expected_tables": ["media_resources"],
+      "expected_fields": ["category", "resource_id", "image_path"],
+      "expected_row_count": 5,
+      "gold_sql": "SELECT category AS 分类, COUNT(resource_id) AS 歌曲数量 FROM media_resources WHERE image_path = 'public_third_part.jpeg' GROUP BY category ORDER BY 歌曲数量 DESC, 分类"
+    },
+    {
+      "id": "media_003",
+      "category": "专属封面反例",
+      "question": "找出已经配置专属封面的歌曲",
+      "expected_tables": ["media_resources"],
+      "expected_fields": ["resource_id", "cn_file_name", "image_path"],
+      "expected_row_count": 7,
+      "gold_sql": "SELECT resource_id AS 资源ID, cn_file_name AS 歌曲名称, image_path AS 当前封面 FROM media_resources WHERE image_path <> 'public_third_part.jpeg' ORDER BY resource_id"
+    }
+  ]
+}

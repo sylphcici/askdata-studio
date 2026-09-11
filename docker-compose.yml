@@ -1,0 +1,32 @@
+services:
+  backend:
+    build:
+      context: ./backend
+    env_file:
+      - ./backend/.env
+    environment:
+      SESSION_ARCHIVE_PATH: /data/session_archive.db
+      SAVED_MEMORIES_PATH: /data/saved_memories.json
+    volumes:
+      - ./runtime:/data
+      - ./runtime/evaluation-reports:/app/evals/reports
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_BASE: ""
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+

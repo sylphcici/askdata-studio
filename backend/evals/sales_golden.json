@@ -1,0 +1,168 @@
+{
+  "dataset": "sales_golden_v1",
+  "database": "ecommerce_ops",
+  "user_id": "demo_current_sales",
+  "description": "AskData Studio 电商运营自然语言问数黄金测试集。标准答案由人工确认的 DuckDB SQL 生成。",
+  "cases": [
+    {
+      "id": "sales_001",
+      "category": "单表聚合",
+      "question": "按下单时间统计2026年7月各地区的实付销售额",
+      "expected_tables": ["orders"],
+      "expected_fields": ["region", "paid_amount", "ordered_at"],
+      "gold_sql": "SELECT region AS 地区, ROUND(SUM(paid_amount), 2) AS 实付销售额 FROM orders WHERE ordered_at >= DATE '2026-07-01' AND ordered_at < DATE '2026-08-01' GROUP BY region ORDER BY 实付销售额 DESC"
+    },
+    {
+      "id": "sales_002",
+      "category": "单表聚合",
+      "question": "按下单时间统计2026年7月各订单状态的订单数量",
+      "expected_tables": ["orders"],
+      "expected_fields": ["order_status", "ordered_at"],
+      "gold_sql": "SELECT order_status AS 订单状态, COUNT(order_id) AS 订单数 FROM orders WHERE ordered_at >= DATE '2026-07-01' AND ordered_at < DATE '2026-08-01' GROUP BY order_status ORDER BY 订单数 DESC"
+    },
+    {
+      "id": "sales_003",
+      "category": "单表聚合",
+      "question": "按下单时间统计2026年7月各地区的订单量和平均实付金额",
+      "expected_tables": ["orders"],
+      "expected_fields": ["region", "order_id", "paid_amount", "ordered_at"],
+      "gold_sql": "SELECT region AS 地区, COUNT(order_id) AS 订单数, ROUND(AVG(paid_amount), 2) AS 平均实付金额 FROM orders WHERE ordered_at >= DATE '2026-07-01' AND ordered_at < DATE '2026-08-01' GROUP BY region ORDER BY 订单数 DESC"
+    },
+    {
+      "id": "sales_004",
+      "category": "时间分析",
+      "question": "按下单日期统计2026年7月每天的实付销售额",
+      "expected_tables": ["orders"],
+      "expected_fields": ["ordered_at", "paid_amount"],
+      "gold_sql": "SELECT CAST(ordered_at AS DATE) AS 日期, ROUND(SUM(paid_amount), 2) AS 实付销售额 FROM orders WHERE ordered_at >= DATE '2026-07-01' AND ordered_at < DATE '2026-08-01' GROUP BY CAST(ordered_at AS DATE) ORDER BY 日期"
+    },
+    {
+      "id": "sales_005",
+      "category": "时间分析",
+      "question": "按下单时间对比2026年6月和7月的实付销售额",
+      "expected_tables": ["orders"],
+      "expected_fields": ["ordered_at", "paid_amount"],
+      "gold_sql": "SELECT STRFTIME(ordered_at, '%Y-%m') AS 月份, ROUND(SUM(paid_amount), 2) AS 实付销售额 FROM orders WHERE ordered_at >= DATE '2026-06-01' AND ordered_at < DATE '2026-08-01' GROUP BY STRFTIME(ordered_at, '%Y-%m') ORDER BY 月份"
+    },
+    {
+      "id": "sales_006",
+      "category": "店铺经营",
+      "question": "按统计日期汇总2026年7月各店铺的GMV、退款金额和净收入",
+      "expected_tables": ["daily_store_metrics", "stores"],
+      "expected_fields": ["stat_date", "store_id", "store_name", "gmv", "refund_amount", "net_revenue"],
+      "gold_sql": "SELECT s.store_name AS 店铺, ROUND(SUM(d.gmv), 2) AS GMV, ROUND(SUM(d.refund_amount), 2) AS 退款金额, ROUND(SUM(d.net_revenue), 2) AS 净收入 FROM daily_store_metrics d JOIN stores s ON d.store_id = s.store_id WHERE d.stat_date >= DATE '2026-07-01' AND d.stat_date < DATE '2026-08-01' GROUP BY s.store_name ORDER BY GMV DESC"
+    },
+    {
+      "id": "sales_007",
+      "category": "店铺经营",
+      "question": "按统计日期找出2026年7月净收入最高的10家店铺",
+      "expected_tables": ["daily_store_metrics", "stores"],
+      "expected_fields": ["stat_date", "store_id", "store_name", "net_revenue"],
+      "gold_sql": "SELECT s.store_name AS 店铺, ROUND(SUM(d.net_revenue), 2) AS 净收入 FROM daily_store_metrics d JOIN stores s ON d.store_id = s.store_id WHERE d.stat_date >= DATE '2026-07-01' AND d.stat_date < DATE '2026-08-01' GROUP BY s.store_name ORDER BY 净收入 DESC LIMIT 10"
+    },
+    {
+      "id": "sales_008",
+      "category": "店铺经营",
+      "question": "按统计日期汇总2026年7月各店铺的访客数、买家数，并用买家数除以访客数计算转化率",
+      "expected_tables": ["daily_store_metrics", "stores"],
+      "expected_fields": ["stat_date", "store_id", "store_name", "visitors", "buyers"],
+      "gold_sql": "SELECT s.store_name AS 店铺, SUM(d.visitors) AS 访客数, SUM(d.buyers) AS 买家数, ROUND(SUM(d.buyers) * 1.0 / NULLIF(SUM(d.visitors), 0), 4) AS 转化率 FROM daily_store_metrics d JOIN stores s ON d.store_id = s.store_id WHERE d.stat_date >= DATE '2026-07-01' AND d.stat_date < DATE '2026-08-01' GROUP BY s.store_name ORDER BY 转化率 DESC"
+    },
+    {
+      "id": "sales_009",
+      "category": "目标分析",
+      "question": "按统计日期汇总2026年7月各店铺的GMV，与当月GMV目标对比并计算完成率",
+      "expected_tables": ["daily_store_metrics", "sales_targets", "stores"],
+      "expected_fields": ["stat_date", "store_id", "store_name", "gmv", "target_month", "gmv_target"],
+      "gold_sql": "WITH actual AS (SELECT store_id, SUM(gmv) AS actual_gmv FROM daily_store_metrics WHERE stat_date >= DATE '2026-07-01' AND stat_date < DATE '2026-08-01' GROUP BY store_id) SELECT s.store_name AS 店铺, ROUND(a.actual_gmv, 2) AS GMV, ROUND(t.gmv_target, 2) AS GMV目标, ROUND(a.actual_gmv / NULLIF(t.gmv_target, 0), 4) AS 完成率 FROM actual a JOIN sales_targets t ON a.store_id = t.store_id JOIN stores s ON a.store_id = s.store_id WHERE t.target_month = '2026-07' ORDER BY 完成率 DESC"
+    },
+    {
+      "id": "sales_010",
+      "category": "目标分析",
+      "question": "按统计日期汇总2026年7月净收入，并找出未完成当月净收入目标的店铺",
+      "expected_tables": ["daily_store_metrics", "sales_targets", "stores"],
+      "expected_fields": ["stat_date", "store_id", "store_name", "net_revenue", "target_month", "net_revenue_target"],
+      "gold_sql": "WITH actual AS (SELECT store_id, SUM(net_revenue) AS actual_revenue FROM daily_store_metrics WHERE stat_date >= DATE '2026-07-01' AND stat_date < DATE '2026-08-01' GROUP BY store_id) SELECT s.store_name AS 店铺, ROUND(a.actual_revenue, 2) AS 净收入, ROUND(t.net_revenue_target, 2) AS 净收入目标 FROM actual a JOIN sales_targets t ON a.store_id = t.store_id JOIN stores s ON a.store_id = s.store_id WHERE t.target_month = '2026-07' AND a.actual_revenue < t.net_revenue_target ORDER BY 净收入 ASC"
+    },
+    {
+      "id": "sales_011",
+      "category": "商品分析",
+      "question": "按订单下单时间统计2026年7月各商品类目的销量和订单明细实付金额",
+      "expected_tables": ["orders", "order_items", "products", "product_categories"],
+      "expected_fields": ["ordered_at", "order_id", "product_id", "category_id", "category_name", "quantity", "paid_amount"],
+      "gold_sql": "SELECT c.category_name AS 商品类目, SUM(i.quantity) AS 销量, ROUND(SUM(i.paid_amount), 2) AS 实付销售额 FROM orders o JOIN order_items i ON o.order_id = i.order_id JOIN products p ON i.product_id = p.product_id JOIN product_categories c ON p.category_id = c.category_id WHERE o.ordered_at >= DATE '2026-07-01' AND o.ordered_at < DATE '2026-08-01' GROUP BY c.category_name ORDER BY 实付销售额 DESC"
+    },
+    {
+      "id": "sales_012",
+      "category": "商品分析",
+      "question": "按商品日指标的统计日期找出2026年7月GMV最高的10个商品",
+      "expected_tables": ["daily_product_metrics", "products"],
+      "expected_fields": ["stat_date", "product_id", "product_name", "gmv"],
+      "gold_sql": "SELECT p.product_name AS 商品, ROUND(SUM(d.gmv), 2) AS GMV FROM daily_product_metrics d JOIN products p ON d.product_id = p.product_id WHERE d.stat_date >= DATE '2026-07-01' AND d.stat_date < DATE '2026-08-01' GROUP BY p.product_name ORDER BY GMV DESC LIMIT 10"
+    },
+    {
+      "id": "sales_013",
+      "category": "营销分析",
+      "question": "按广告统计日期汇总2026年7月的曝光、点击、转化，并用归因收入除以广告花费计算ROI",
+      "expected_tables": ["ad_daily_stats"],
+      "expected_fields": ["stat_date", "impressions", "clicks", "conversions", "ad_cost", "attributed_revenue"],
+      "gold_sql": "SELECT SUM(impressions) AS 曝光数, SUM(clicks) AS 点击数, SUM(conversions) AS 转化数, ROUND(SUM(attributed_revenue) / NULLIF(SUM(ad_cost), 0), 4) AS ROI FROM ad_daily_stats WHERE stat_date >= DATE '2026-07-01' AND stat_date < DATE '2026-08-01'"
+    },
+    {
+      "id": "sales_014",
+      "category": "营销分析",
+      "question": "按订单下单时间统计2026年7月各渠道的订单数和实付销售额",
+      "expected_tables": ["orders", "acquisition_channels"],
+      "expected_fields": ["ordered_at", "channel_id", "channel_name", "order_id", "paid_amount"],
+      "gold_sql": "SELECT c.channel_name AS 渠道, COUNT(o.order_id) AS 订单数, ROUND(SUM(o.paid_amount), 2) AS 实付销售额 FROM orders o JOIN acquisition_channels c ON o.channel_id = c.channel_id WHERE o.ordered_at >= DATE '2026-07-01' AND o.ordered_at < DATE '2026-08-01' GROUP BY c.channel_name ORDER BY 实付销售额 DESC"
+    },
+    {
+      "id": "sales_015",
+      "category": "营销分析",
+      "question": "按优惠券核销时间统计2026年7月核销金额最高的10种优惠券",
+      "expected_tables": ["coupon_usages", "coupons"],
+      "expected_fields": ["used_at", "coupon_id", "coupon_name", "discount_amount"],
+      "gold_sql": "SELECT c.coupon_name AS 优惠券, ROUND(SUM(u.discount_amount), 2) AS 核销金额 FROM coupon_usages u JOIN coupons c ON u.coupon_id = c.coupon_id WHERE u.used_at >= DATE '2026-07-01' AND u.used_at < DATE '2026-08-01' GROUP BY c.coupon_name ORDER BY 核销金额 DESC LIMIT 10"
+    },
+    {
+      "id": "sales_016",
+      "category": "售后分析",
+      "question": "按退款申请时间统计2026年7月各退款原因的退款笔数和退款金额",
+      "expected_tables": ["refunds"],
+      "expected_fields": ["applied_at", "refund_reason", "refund_id", "refund_amount"],
+      "gold_sql": "SELECT refund_reason AS 退款原因, COUNT(refund_id) AS 退款笔数, ROUND(SUM(refund_amount), 2) AS 退款金额 FROM refunds WHERE applied_at >= DATE '2026-07-01' AND applied_at < DATE '2026-08-01' GROUP BY refund_reason ORDER BY 退款金额 DESC"
+    },
+    {
+      "id": "sales_017",
+      "category": "售后分析",
+      "question": "按退款申请时间统计2026年7月各店铺的退款金额",
+      "expected_tables": ["refunds", "orders", "stores"],
+      "expected_fields": ["applied_at", "order_id", "store_id", "store_name", "refund_amount"],
+      "gold_sql": "SELECT s.store_name AS 店铺, ROUND(SUM(r.refund_amount), 2) AS 退款金额 FROM refunds r JOIN orders o ON r.order_id = o.order_id JOIN stores s ON o.store_id = s.store_id WHERE r.applied_at >= DATE '2026-07-01' AND r.applied_at < DATE '2026-08-01' GROUP BY s.store_name ORDER BY 退款金额 DESC"
+    },
+    {
+      "id": "sales_018",
+      "category": "履约分析",
+      "question": "按发货时间统计2026年7月各物流公司的发货包裹数",
+      "expected_tables": ["shipments"],
+      "expected_fields": ["shipped_at", "carrier_name", "package_count"],
+      "gold_sql": "SELECT carrier_name AS 物流公司, SUM(package_count) AS 发货包裹数 FROM shipments WHERE shipped_at >= DATE '2026-07-01' AND shipped_at < DATE '2026-08-01' GROUP BY carrier_name ORDER BY 发货包裹数 DESC"
+    },
+    {
+      "id": "sales_019",
+      "category": "履约分析",
+      "question": "按签收时间统计2026年7月已签收包裹从发货到签收的平均配送天数",
+      "expected_tables": ["shipments"],
+      "expected_fields": ["shipped_at", "delivered_at"],
+      "gold_sql": "SELECT ROUND(AVG(DATE_DIFF('second', shipped_at, delivered_at)) / 86400.0, 2) AS 平均配送天数 FROM shipments WHERE delivered_at IS NOT NULL AND delivered_at >= DATE '2026-07-01' AND delivered_at < DATE '2026-08-01'"
+    },
+    {
+      "id": "sales_020",
+      "category": "用户分析",
+      "question": "按注册时间统计2026年7月各注册渠道的新增用户数",
+      "expected_tables": ["users", "acquisition_channels"],
+      "expected_fields": ["registered_at", "register_channel_id", "channel_id", "channel_name", "user_id"],
+      "gold_sql": "SELECT c.channel_name AS 注册渠道, COUNT(u.user_id) AS 新增用户数 FROM users u JOIN acquisition_channels c ON u.register_channel_id = c.channel_id WHERE u.registered_at >= DATE '2026-07-01' AND u.registered_at < DATE '2026-08-01' GROUP BY c.channel_name ORDER BY 新增用户数 DESC"
+    }
+  ]
+}

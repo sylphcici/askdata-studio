@@ -1,0 +1,42 @@
+# Secrets and local environment
+.env
+.env.*
+!.env.example
+!.env.production.example
+*.pem
+*.key
+*.pfx
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.python*/
+.pytest_cache/
+
+# Node
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Runtime and user data
+runtime/
+backend/data/*.db
+backend/data/saved_memories.json
+backend/data/schema_index_local_test.json
+backend/evals/reports/
+
+# Logs and temporary files
+*.log
+.node/
+.downloads/
+.tmp*/
+deployment/
+*.zip
+
+# OS and editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
